@@ -41,3 +41,6 @@ training_losses_*.csv
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Manuscript
+manuscript/
