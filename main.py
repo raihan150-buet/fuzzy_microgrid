@@ -113,7 +113,9 @@ def main():
         current_ma = float(pd.Series(rewards).rolling(20, min_periods=1).mean().iloc[-1])
         moving_rewards.append(current_ma)
         
-        agent.step_schedulers()
+        # Only step schedulers if training has actually started (optimizers have stepped)
+        if total_steps >= args.warmup_steps:
+            agent.step_schedulers()
 
         # Update progress bar
         pbar.set_postfix({
