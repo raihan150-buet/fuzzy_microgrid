@@ -13,6 +13,9 @@ ENV/
 env.bak/
 venv.bak/
 
+#Manuscripts
+manuscript/
+
 # Outputs and Checkpoints
 outputs/
 plots_*/
