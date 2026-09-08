@@ -8,22 +8,27 @@ class AttentionEncoder(nn.Module):
     Novelty: Attention-based Temporal State Encoder.
     Processes a sequence of states (history) to extract robust temporal features.
     """
-    def __init__(self, state_dim, embed_dim=64, num_heads=4):
+    def __init__(self, state_dim, seq_len, embed_dim=64, num_heads=4):
         super().__init__()
         self.state_proj = nn.Linear(state_dim, embed_dim)
+        # Positional encoding is critical for sequence ordering
+        self.pos_embed = nn.Parameter(torch.zeros(1, seq_len, embed_dim))
+        
+        # RL requires stable transformers: dropout=0.0 and norm_first=True
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim, 
             nhead=num_heads, 
             dim_feedforward=embed_dim * 2, 
-            dropout=0.1, 
-            batch_first=True
+            dropout=0.0, 
+            batch_first=True,
+            norm_first=True
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=1)
         self.output_dim = embed_dim
 
     def forward(self, state_seq):
         # state_seq: (B, seq_len, state_dim)
-        x = self.state_proj(state_seq)
+        x = self.state_proj(state_seq) + self.pos_embed
         x = self.transformer(x)
         # Global average pooling over the sequence length
         return x.mean(dim=1)
@@ -37,7 +42,7 @@ class GaussianPolicy(nn.Module):
         self.state_dim = state_dim
 
         if seq_len > 1:
-            self.encoder = AttentionEncoder(state_dim)
+            self.encoder = AttentionEncoder(state_dim, seq_len)
             encoded_dim = self.encoder.output_dim
         else:
             self.encoder = nn.Identity()
@@ -83,7 +88,7 @@ class QNetwork(nn.Module):
         self.state_dim = state_dim
 
         if seq_len > 1:
-            self.encoder = AttentionEncoder(state_dim)
+            self.encoder = AttentionEncoder(state_dim, seq_len)
             encoded_dim = self.encoder.output_dim
         else:
             self.encoder = nn.Identity()

@@ -40,11 +40,13 @@ class SACAgent:
         self.q1_opt = optim.Adam(self.q1.parameters(), lr=critic_lr)
         self.q2_opt = optim.Adam(self.q2.parameters(), lr=critic_lr)
 
-        # Learning Rate Schedulers (Standard DL Practice)
-        # Using CosineAnnealingLR over max expected episodes
-        self.policy_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.policy_opt, T_max=max_episodes, eta_min=1e-5)
-        self.q1_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.q1_opt, T_max=max_episodes, eta_min=1e-5)
-        self.q2_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.q2_opt, T_max=max_episodes, eta_min=1e-5)
+        # Learning Rate Schedulers
+        # Note: Aggressive LR scheduling (like CosineAnnealing to 1e-5) often causes 
+        # catastrophic forgetting in SAC because the agent loses plasticity.
+        # Switched to ConstantLR to maintain stability while keeping the DL practice hooks.
+        self.policy_scheduler = optim.lr_scheduler.ConstantLR(self.policy_opt, factor=1.0)
+        self.q1_scheduler = optim.lr_scheduler.ConstantLR(self.q1_opt, factor=1.0)
+        self.q2_scheduler = optim.lr_scheduler.ConstantLR(self.q2_opt, factor=1.0)
 
         # Entropy tuning
         self.target_entropy = -float(action_dim) if target_entropy is None else target_entropy
