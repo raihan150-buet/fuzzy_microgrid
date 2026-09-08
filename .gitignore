@@ -17,7 +17,6 @@ venv.bak/
 manuscript/
 
 # Outputs and Checkpoints
-outputs/
 plots_*/
 results_*.csv
 kpis_*.csv
