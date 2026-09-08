@@ -75,8 +75,15 @@ def main():
 
     total_steps = 0
 
+    from tqdm import tqdm
     print(f"Starting Training for {args.episodes} episodes...")
-    for ep in range(args.episodes):
+    best_reward = -float('inf')
+    output_dir = "outputs"
+    os.makedirs(output_dir, exist_ok=True)
+    best_model_path = os.path.join(output_dir, "best_model")
+
+    pbar = tqdm(range(args.episodes), desc="Training")
+    for ep in pbar:
         state = train_env.reset(random_start=True)
         done = False
         ep_reward = 0.0
@@ -102,25 +109,42 @@ def main():
             total_steps += 1
 
         rewards.append(ep_reward)
-        moving_rewards.append(float(pd.Series(rewards).rolling(20, min_periods=1).mean().iloc[-1]))
+        current_ma = float(pd.Series(rewards).rolling(20, min_periods=1).mean().iloc[-1])
+        moving_rewards.append(current_ma)
+
+        # Update progress bar
+        pbar.set_postfix({
+            "Reward": f"{ep_reward:.2f}",
+            "MA20": f"{current_ma:.2f}",
+            "Best": f"{best_reward:.2f}" if best_reward != -float('inf') else "N/A"
+        })
+
+        # Save best model based on 20-episode moving average
+        if current_ma > best_reward and ep >= 20:
+            best_reward = current_ma
+            agent.save(best_model_path)
 
         if (ep + 1) % 20 == 0:
             val_reward = evaluate_policy_reward(train_env, agent)
             validation_rewards.append({"episode": ep + 1, "validation_reward": val_reward})
-            alpha_val = loss_history["alpha"][-1] if loss_history["alpha"] else np.nan
-            print(f"Episode {ep+1}/{args.episodes} | Reward={ep_reward:.3f} | MA20={moving_rewards[-1]:.3f} | Val={val_reward:.3f} | Alpha={alpha_val:.4f}")
-        elif (ep + 1) % 10 == 0:
-            print(f"Episode {ep+1}/{args.episodes} | Reward={ep_reward:.3f} | MA20={moving_rewards[-1]:.3f}")
+
+    print(f"Loading best model (MA20 Reward: {best_reward:.2f}) for testing...")
+    # The agent doesn't have a load method, but we saved it. To test with it we should ideally load it.
+    # We will implement a quick load below.
+    try:
+        agent.policy.load_state_dict(torch.load(os.path.join(best_model_path, "policy.pth")))
+        agent.q1.load_state_dict(torch.load(os.path.join(best_model_path, "q1.pth")))
+        agent.q2.load_state_dict(torch.load(os.path.join(best_model_path, "q2.pth")))
+    except Exception as e:
+        print(f"Could not load best model, using final model. Error: {e}")
 
     # Evaluation
     print("Evaluating on test set...")
     results = evaluate_agent(test_env, agent)
 
     timestamp_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = "outputs"
-    os.makedirs(output_dir, exist_ok=True)
     
-    agent.save(os.path.join(output_dir, "model"))
+    agent.save(os.path.join(output_dir, f"final_model_{timestamp_tag}"))
 
     results_file = os.path.join(output_dir, f"results_{timestamp_tag}.csv")
     kpi_file = os.path.join(output_dir, f"kpis_{timestamp_tag}.csv")
