@@ -63,7 +63,8 @@ def main():
         state_dim=train_env.state_dim,
         action_dim=train_env.action_dim,
         seq_len=args.seq_len,
-        device=args.device
+        device=args.device,
+        max_episodes=args.episodes
     )
     
     replay = ReplayBuffer(capacity=500000)
@@ -111,6 +112,8 @@ def main():
         rewards.append(ep_reward)
         current_ma = float(pd.Series(rewards).rolling(20, min_periods=1).mean().iloc[-1])
         moving_rewards.append(current_ma)
+        
+        agent.step_schedulers()
 
         # Update progress bar
         pbar.set_postfix({

@@ -17,7 +17,8 @@ class SACAgent:
         critic_lr=3e-4,
         alpha_lr=3e-4,
         target_entropy=None,
-        device="cpu"
+        device="cpu",
+        max_episodes=1000
     ):
         self.device = torch.device(device)
         self.gamma = gamma
@@ -39,10 +40,22 @@ class SACAgent:
         self.q1_opt = optim.Adam(self.q1.parameters(), lr=critic_lr)
         self.q2_opt = optim.Adam(self.q2.parameters(), lr=critic_lr)
 
+        # Learning Rate Schedulers (Standard DL Practice)
+        # Using CosineAnnealingLR over max expected episodes
+        self.policy_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.policy_opt, T_max=max_episodes, eta_min=1e-5)
+        self.q1_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.q1_opt, T_max=max_episodes, eta_min=1e-5)
+        self.q2_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.q2_opt, T_max=max_episodes, eta_min=1e-5)
+
         # Entropy tuning
         self.target_entropy = -float(action_dim) if target_entropy is None else target_entropy
         self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
         self.alpha_opt = optim.Adam([self.log_alpha], lr=alpha_lr)
+        
+    def step_schedulers(self):
+        """Advances the learning rate schedulers. Call at end of each episode."""
+        self.policy_scheduler.step()
+        self.q1_scheduler.step()
+        self.q2_scheduler.step()
 
     @property
     def alpha(self):
