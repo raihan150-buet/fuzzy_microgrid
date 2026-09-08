@@ -1,0 +1,40 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Outputs and Checkpoints
+outputs/
+plots_*/
+results_*.csv
+kpis_*.csv
+training_rewards_*.csv
+validation_rewards_*.csv
+training_losses_*.csv
+
+# Ignore top-level CSVs that might be accidentally created, but keep the data directory
+*.csv
+!data/*.csv
+
+# Models
+*.pth
+*.pt
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
