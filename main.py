@@ -115,7 +115,7 @@ def main():
         
         # Only step schedulers if training has actually started (optimizers have stepped)
         if total_steps >= args.warmup_steps:
-            agent.step_schedulers()
+            agent.step_schedulers(current_ma)
 
         # Update progress bar
         pbar.set_postfix({

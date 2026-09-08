@@ -41,23 +41,22 @@ class SACAgent:
         self.q2_opt = optim.Adam(self.q2.parameters(), lr=critic_lr)
 
         # Learning Rate Schedulers
-        # Note: Aggressive LR scheduling (like CosineAnnealing to 1e-5) often causes 
-        # catastrophic forgetting in SAC because the agent loses plasticity.
-        # Switched to ConstantLR to maintain stability while keeping the DL practice hooks.
-        self.policy_scheduler = optim.lr_scheduler.ConstantLR(self.policy_opt, factor=1.0)
-        self.q1_scheduler = optim.lr_scheduler.ConstantLR(self.q1_opt, factor=1.0)
-        self.q2_scheduler = optim.lr_scheduler.ConstantLR(self.q2_opt, factor=1.0)
+        # Learning Rate Schedulers
+        # Reduce LR by half if the MA20 hasn't improved for 20 episodes
+        self.policy_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.policy_opt, mode='max', factor=0.5, patience=20, min_lr=1e-5)
+        self.q1_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.q1_opt, mode='max', factor=0.5, patience=20, min_lr=1e-5)
+        self.q2_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.q2_opt, mode='max', factor=0.5, patience=20, min_lr=1e-5)
 
         # Entropy tuning
         self.target_entropy = -float(action_dim) if target_entropy is None else target_entropy
         self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
         self.alpha_opt = optim.Adam([self.log_alpha], lr=alpha_lr)
         
-    def step_schedulers(self):
-        """Advances the learning rate schedulers. Call at end of each episode."""
-        self.policy_scheduler.step()
-        self.q1_scheduler.step()
-        self.q2_scheduler.step()
+    def step_schedulers(self, metric):
+        """Advances the learning rate schedulers based on the given metric. Call at end of each episode."""
+        self.policy_scheduler.step(metric)
+        self.q1_scheduler.step(metric)
+        self.q2_scheduler.step(metric)
 
     @property
     def alpha(self):
